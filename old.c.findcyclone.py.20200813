@@ -1,19 +1,13 @@
 from numpy import *
 from detect_fsub import *
 from datetime import datetime, timedelta
-from detect_func import box_filtering
 import util
-import grids
+#import config
 import IO_Master
 import ConstCyclone
 import Cyclone
 import calendar
 import os, sys, shutil
-import numpy as np
-import scipy.ndimage.filters as filters
-
-import matplotlib
-import matplotlib.pyplot as plt
 #--------------------------------------------------
 #prj     = "JRA55"
 #model   = "__"
@@ -37,8 +31,8 @@ noleap  = False
 dbbaseDir  = '/home/utsumi/mnt/lab_work/hk01/d4PDF_GCM'
 wsbaseDir= '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
 
-iDTime = datetime(2000,1,1,0)
-eDTime = datetime(2010,12,31,18)
+iDTime = datetime(2010,1,1,0)
+eDTime = datetime(2010,1,31,18)
 
 #iDTime = datetime(2006,1,1,6)
 #eDTime = datetime(2015,1,1,0)
@@ -85,42 +79,12 @@ a1lon  = iom.Lon
 ny     = iom.ny
 nx     = iom.nx
 miss   = -9999.0
-
-dlon = a1lon[1] - a1lon[0]
-dlat = (a1lat[1:] - a1lat[:-1]).mean()
-dx_4deg = int(4.0/dlon)
-dy_4deg = int(4.0/dlat)
-######################################################
-#def box_filtering(a2in, a1y, a1x, dy, dx, func=None, cover_poles=True, miss_in=-9999., miss_out=-9999.):
-#
-#  if type(a2in) is np.ma.core.MaskedArray:
-#    a2in = a2in.filled(miss_in)
-#
-#  a2large = grids.expand_map_global_2d(a2in, dy, dx, cover_poles=cover_poles)
-#  a1y_large = a1y+dy
-#  a1x_large = a1x+dx
-#  ldyx = [[idy,idx] for idy in range(-dy,dy+1) for idx in range(-dx, dx+1)]
-#  nybox = 2*dy+1
-#  nxbox = 2*dx+1
-#
-#  a2container = np.empty([len(a1y), nybox*nxbox], a2in.dtype)
-#  for i,(idy,idx) in enumerate(ldyx):
-#    a2container[:, i] = a2large[a1y_large+idy, a1x_large+idx]
-#
-#  if func=='sum':
-#    a1out = ma.masked_equal(a2container, miss_in).sum(axis=1)
-#  elif func=='mean':
-#    a1out = ma.masked_equal(a2container, miss_in).mean(axis=1)
-#  elif func=='min':
-#    a1out = ma.masked_equal(a2container, miss_in).min(axis=1)
-#  elif func=='max':
-#    a1out = ma.masked_equal(a2container, miss_in).max(axis=1)
-#  else:
-#    print 'check func',func
-#    sys.exit()
-#
-#  return a1out.filled(miss_out)
 #####################################################
+def var_psl(model):
+  # variable name for mean sea level pressure
+  if model in ["JRA25","JRA55"]:
+    return "PRMSL"
+
 def check_file(sname):
   if not os.access(sname, os.F_OK):
     print "no file:",sname
@@ -153,59 +117,32 @@ def read_txtlist(iname):
 ##**************************************************
 ## Mean Sea Level Pressure
 ##------------------------
+#pslmeanname = pslmeandir_root + "/anl_surf125.PRMSL.0000000000.sa.one"
+#a2pslmean = fromfile(pslmeanname, float32).reshape(ny, nx)
 ##------------------------
 for DTime in lDTime:
   year = DTime.year
   mon  = DTime.month
   day  = DTime.day
   hour = DTime.hour
-  #pgraddir = cy.path_a2dat("pgrad",datetime(year,mon,1)).srcDir
-  #mk_dir(pgraddir)
+  pgraddir = cy.path_a2dat("pgrad",datetime(year,mon,1)).srcDir
+  mk_dir(pgraddir)
   #***************************************
   # pgrad
   #---------------------------------------
-  #pgradname = cy.path_a2dat("pgrad",DTime).srcPath
-  a2slp   = iom.Load_6hrSfc("slp", DTime)
-  #findcyclone_out = detect_fsub.findcyclone_bn(a2slp.T, a1lat, a1lon, iom.miss,  miss)
-  #a2pgrad = findcyclone_out.T
-  #a2pgrad.tofile(pgradname)
+  pgradname = cy.path_a2dat("pgrad",DTime).srcPath
+  a2psl   = iom.Load_6hrSfc("slp", DTime)
+  findcyclone_out = detect_fsub.findcyclone_bn(a2psl.T, a1lat, a1lon, iom.miss,  miss)
+  a2pgrad = findcyclone_out.T
+  a2pgrad.tofile(pgradname)
 
-  a2center = -detect_fsub.find_localmax(-a2slp.T, a1lat, a1lon, iom.miss,  0).T
+  print pgradname
 
-  a1y,a1x = np.where( ma.masked_not_equal(a2center,0))
-
-  a1slp = a2center[a1y,a1x]
-
-  xdir, xname = cy.path_clist_org("x",DTime)
-  ydir, yname = cy.path_clist_org("y",DTime)
-
-  slpdir, slpname = cy.path_clist_org("slp",DTime)
-
-  mk_dir(xdir)
-  mk_dir(ydir)
-  mk_dir(slpdir)
-  np.save(xname, a1x)
-  np.save(yname, a1y)
-  np.save(slpname, a1slp)
-  #print slpname
   #***************************************
-  # Mean slp
+  # rvort @ 850
   #---------------------------------------
-  a1slp_mean_adj = box_filtering(a2slp, a1y, a1x, 1, 1, func='mean', miss_in=-9999, miss_out=-9999.)
-  slpmean_adj_dir, slpmean_adj_name = cy.path_clist_org("slp_mean_adj",DTime)
-  mk_dir(slpmean_adj_dir)
-  np.save(slpmean_adj_name, a1slp_mean_adj)
-
-
-  a1slp_mean_box = box_filtering(a2slp, a1y, a1x, dy_4deg, dx_4deg, func='mean', miss_in=-9999, miss_out=-9999.)
-  slpmean_box_dir, slpmean_box_name = cy.path_clist_org("slp_mean_box",DTime)
-  mk_dir(slpmean_box_dir)
-  np.save(slpmean_box_name, a1slp_mean_box)
-
-  ##***************************************
-  ## rvort @ 850
-  ##---------------------------------------
-  rvortdir, rvortname = cy.path_clist_org("vortlw",DTime)
+  rvortname = cy.path_a2dat("vortlw",DTime).srcPath
+  rvortdir  = cy.path_a2dat("vortlw",datetime(year,mon,1)).srcDir
   mk_dir(rvortdir)
 
   a2u       = iom.Load_6hrPlev("ua", DTime, 850)
@@ -216,21 +153,30 @@ for DTime in lDTime:
   a2rvort[:ny/2] = -a2rvort[:ny/2]  # The signs of the missing values in the south hemisphere are also fliped
   a2rvort   = ma.masked_where(a2mask, a2rvort).filled(iom.miss)
 
-  #- find maximum vorticity in 9x9 box --
-  a1maxvort_adj = box_filtering(a2rvort, a1y, a1x, 1, 1, func='max', miss_in=-9999, miss_out=-9999.)
 
-  ##- find maximum vorticity in a (2*dy+1) x (2*dx+1) box --
-  a1maxvort_box = box_filtering(a2rvort, a1y, a1x, dy_4deg, dx_4deg, func='max', miss_in=-9999, miss_out=-9999.)
+  a2large   = empty([ny+2,nx+2],float32)
+  a3rvort   = empty([9,ny,nx],float32)
+
+  a2large[0]    = miss
+  a2large[-1]   = miss
+  a2large[1:-1,  0]   = a2rvort[:,-1]
+  a2large[1:-1, -1]   = a2rvort[:, 0]
+  a2large[1:-1, 1:-1] = a2rvort
+
+  a3rvort[0] = a2rvort
+  a3rvort[1] = a2large[:-2,:-2]
+  a3rvort[2] = a2large[:-2,2:]
+  a3rvort[3] = a2large[:-2,1:-1]
+  a3rvort[4] = a2large[2:,:-2]
+  a3rvort[5] = a2large[2:,2:]
+  a3rvort[6] = a2large[2:,1:-1]
+  a3rvort[7] = a2large[1:-1:,:-2]
+  a3rvort[8] = a2large[1:-1:,2:]
+
+  a2maxvort  = a3rvort.max(axis=0)
+  a2maxvort  = ma.masked_where(a2pgrad==miss, a2maxvort).filled(miss)
+
+  a2maxvort.tofile(rvortname)
 
 
-  #-- Save ----
-  vort_max_box_dir, vort_max_box_name = cy.path_clist_org("vortlw_max_box",DTime)
-  vort_max_adj_dir, vort_max_adj_name = cy.path_clist_org("vortlw",DTime)
-
-
-  mk_dir(vort_max_box_dir)
-  mk_dir(vort_max_adj_dir)
-  np.save(vort_max_box_name, a1maxvort_box)
-  np.save(vort_max_adj_name, a1maxvort_adj)
-  print vort_max_box_name
-
+# %%

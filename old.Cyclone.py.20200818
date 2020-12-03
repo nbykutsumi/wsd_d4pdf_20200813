@@ -139,9 +139,16 @@ class Cyclone():
     self.exrvort= const['exrvort']
     self.tcrvort= const['tcrvort']
     self.thwcore= const['thwcore']
-    self.thwind = const['thwind']
-    self.thwdif = const['thwdif']
     #------------
+    #if os.path.exists(os.path.join(basebaseDir, "lat.txt")):
+    #  self.Lat     = read_txtlist( os.path.join(basebaseDir, "lat.txt"))
+    #  self.Lon     = read_txtlist( os.path.join(basebaseDir, "lon.txt"))
+    #elif os.path.exists(os.path.join(self.baseDir, "lat.txt")):
+    #  self.Lat     = read_txtlist( os.path.join(self.baseDir, "lat.txt"))
+    #  self.Lon     = read_txtlist( os.path.join(self.baseDir, "lon.txt"))
+    #else:
+    #  self.Lat     = const['Lat'] 
+    #  self.Lon     = const['Lon'] 
 
     self.Lat     = const['Lat'] 
     self.Lon     = const['Lon'] 
@@ -421,11 +428,15 @@ class Cyclone():
 
   def mkInstDictC_objTC(self, iYM, eYM, varname="vortlw"):
     thrvort   = self.tcrvort
+    #thpgrad   = self.thpgrad
     thwcore   = self.thwcore
     thdura    = self.thdura
     thinitsst = self.thsst 
-    thwind    = self.thwind
-    thwdif    = self.thwdif  # wind_low - wind_up
+
+
+    #dictExC   = {}
+    #dictTC    = {}
+    #da1       = {}
 
     dictExC   = OrderedDict()
     dictTC    = OrderedDict()
@@ -444,7 +455,7 @@ class Cyclone():
 
     #lvar      = ["dura","pgrad","nowpos","nextpos","time","iedist","rvort","dtlow","dtmid","dtup","initsst","initland"]
     #lvar      = ["dura","nowpos","time","vortlw","dtlow","dtmid","dtup","initsst","initland"]
-    lvar      = ["x","y","dura","time","vortlw","dtlw","dtmd","dtup","initsst","initland","wmaxup","wmaxlw"] 
+    lvar      = ["dura","nowpos","time","vortlw","dtlow","dtmid","dtup","initsst","initland","wmeanup","wmeanlow","dtsum"]  # wmean added.
    
     if varname not in lvar: lvar = lvar + [varname] 
 
@@ -452,33 +463,42 @@ class Cyclone():
     for Year,Mon in lYM:
       for var in lvar:
         if var=='dtsum':
-          da1[var]  = self.load_clist('dtlw', Year, Mon)\
-                     +self.load_clist('dtmd', Year, Mon)\
+          da1[var]  = self.load_clist('dtlow', Year, Mon)\
+                     +self.load_clist('dtmid', Year, Mon)\
                      +self.load_clist('dtup' , Year, Mon)
 
         else:
           da1[var]  = self.load_clist(var, Year, Mon)
 
+
+
+      #print '------------------'
+      #print 'in Cyclone.py'
+      #print 'exrvort',self.exrvort
+      #print 'tcrvort',self.tcrvort
+      #print 'thwcore',self.thwcore
+      #print 'vortlw',da1["vortlw"]
+      #rvort = da1['vortlw']
+      #print 'vortlw',Year,Mon,rvort,rvort.mean()
+      #print ''
+    
       #---- make dictionary -----
       nlist    = len(da1["dura"])
       for i in range(nlist):
-        y           = da1['y'][i]
-        x           = da1['x'][i]
         dura        = da1["dura"    ][i]
-        #nowpos      = da1["nowpos"  ][i]
+        nowpos      = da1["nowpos"  ][i]
         time        = da1["time"    ][i]
         #iedist      = da1["iedist"  ][i]
         #rvort       = abs(da1["vortlw"   ][i])
         rvort       = da1["vortlw"   ][i]
-        dtlow       = da1["dtlw"   ][i]
-        dtmid       = da1["dtmd"   ][i]
+        dtlow       = da1["dtlow"   ][i]
+        dtmid       = da1["dtmid"   ][i]
         dtup        = da1["dtup"    ][i]
         initsst     = da1["initsst" ][i]
         initland    = da1["initland"][i]
         #nextpos     = da1["nextpos" ][i]
-        wup         = da1["wmaxup" ][i]
-        wlow        = da1["wmaxlw" ][i] 
-
+        wup         = da1["wmeanup" ][i]
+        wlow        = da1["wmeanlow"][i] 
         oVar        = da1[varname][i]
         #---- dura -------
         if dura < thdura:
@@ -490,7 +510,7 @@ class Cyclone():
         DTime             = datetime(Year,Mon,Day,Hour)
     
         #---- nowpos  ----
-        #x,y               = fortpos2pyxy(nowpos, self.nx, -9999)
+        x,y               = fortpos2pyxy(nowpos, self.nx, -9999)
     
         #-- List  -------
         oList  = [x,y,oVar] 
@@ -515,27 +535,16 @@ class Cyclone():
     
           continue
 
-        #---- maximum wind @850 --
-        if wlow < thwind:
-          try:
-            dictExC[DTime].append(oList)
-          except KeyError:
-            dictExC[DTime] = [oList]
-
-          #print "wup > wlow !!"
-          continue 
-
         #---- wup & wlow --
-        if (wlow - wup) < thwdif:
-          try:
-            dictExC[DTime].append(oList)
-          except KeyError:
-            dictExC[DTime] = [oList]
+        #if wup > wlow:
+        #  try:
+        #    dictExC[DTime].append(oList)
+        #  except KeyError:
+        #    dictExC[DTime] = [oList]
 
-          #print "wup > wlow !!"
-          continue 
+        #  #print "wup > wlow !!"
+        #  continue 
  
-        #print 'low,up',wlow,wup, wlow-wup
         #---- initsst ----
         if initsst < thinitsst:
           #print "initsst",initsst,"<",thinitsst

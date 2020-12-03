@@ -1,6 +1,5 @@
 # %%
 from numpy import *
-import numpy as np
 from detect_fsub import *
 from datetime import datetime, timedelta
 import util
@@ -33,9 +32,8 @@ noleap  = False
 dbbaseDir = '/home/utsumi/mnt/lab_work/hk01/d4PDF_GCM'
 wsbaseDir = '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
 
-#iDTime = datetime(2000,1,1,0)
-iDTime = datetime(2010,1,31,0)
-eDTime = datetime(2010,12,31,18)
+iDTime = datetime(2010,1,1,0)
+eDTime = datetime(2010,1,5,0)
 
 #iDTime = datetime(2006,1,1,6)  # HAPPI
 #eDTime = datetime(2014,12,31,18)  # HAPPI
@@ -84,8 +82,7 @@ miss_int     = -9999
 endh         = 18
 #thpgrad      = const['thpgrad'] #[Pa/1000km]
 #exrvort      = const['exrvort'] #[s-1]
-#thpgrad      = const['thpgrad_min'] #[Pa/1000km]  2020/5/5
-thpdif       = const['thpdif_min'] # Pa, 8deg box average - center
+thpgrad      = const['thpgrad_min'] #[Pa/1000km]  2020/5/5
 exrvort      = const['rvort_min']  #[s-1]  2020/5/5
 thdist_search = 500.0*1000.0   #[m]
 thtopo       = const['thtopo']
@@ -184,18 +181,14 @@ for idt, DTime in enumerate(lDTime):
   #***************************************
   #* names for 0
   #---------------------------------------
-  slpname0     = cy.path_clist_org("slp",  DTime0)[1]
-  pboxname0    = cy.path_clist_org("slp_mean_box",  DTime0)[1]
-  locname0     = cy.path_clist_org("vortlw",  DTime0)[1]
-  xname0       = cy.path_clist_org("x",  DTime0)[1]
-  yname0       = cy.path_clist_org("y",  DTime0)[1]
-
-  preposname0  = cy.path_clist_org("prepos",DTime0)[1]
-  iposname0    = cy.path_clist_org("ipos",   DTime0)[1]
-  idatename0   = cy.path_clist_org("idate",  DTime0)[1]
-  agename0     = cy.path_clist_org("age",   DTime0)[1]
-  #wdifname0    = cy.path_clist_org("wdif",   DTime0)[1]  # temp
-  #timename0    = cy.path_clist_org("time",   DTime0)[1]  # temp
+  pgradname0   = cy.path_a2dat("pgrad",  DTime0).srcPath
+  locname0     = cy.path_a2dat("vortlw",  DTime0).srcPath
+  preposname0  = cy.path_a2dat("prepos",DTime0).srcPath
+  #pgmaxname0   = cy.path_a2dat("pgmax",  DTime0).srcPath
+  iposname0    = cy.path_a2dat("ipos",   DTime0).srcPath
+  idatename0   = cy.path_a2dat("idate",  DTime0).srcPath
+  agename0     = cy.path_a2dat("age",   DTime0).srcPath
+  timename0    = cy.path_a2dat("time",   DTime0).srcPath  # temp
 
   uadir0       = os.path.join(cy.baseDir,"run.mean","ua","%02d"%(year0),"%02d"%(mon0))
   vadir0       = os.path.join(cy.baseDir,"run.mean","va","%02d"%(year0),"%02d"%(mon0))
@@ -206,29 +199,25 @@ for idt, DTime in enumerate(lDTime):
   #***************************************
   #* names for 1
   #---------------------------------------
-  preposdir1  = cy.path_clist_org("prepos", DTime1)[0]
-  iposdir1    = cy.path_clist_org("ipos",   DTime1)[0]
-  idatedir1   = cy.path_clist_org("idate",  DTime1)[0]
-  agedir1     = cy.path_clist_org("age",    DTime1)[0]
-  #wdifdir1    = cy.path_clist_org("wdif",   DTime1)[0]
+  preposdir1  = cy.path_a2dat("prepos",DTime1).srcDir
+  #pgmaxdir1   = cy.path_a2dat("pgmax",  DTime1).srcDir
+  iposdir1    = cy.path_a2dat("ipos",   DTime1).srcDir
+  idatedir1   = cy.path_a2dat("idate",  DTime1).srcDir
+  agedir1    = cy.path_a2dat("age",     DTime1).srcDir
 
   mk_dir(preposdir1)
+  #mk_dir(pgmaxdir1)
   mk_dir(iposdir1)
   mk_dir(idatedir1)
   mk_dir(agedir1)
-  #mk_dir(wdifdir1)
 
-  slpname1     = cy.path_clist_org("slp",    DTime1)[1]
-  pboxname1    = cy.path_clist_org("slp_mean_box", DTime1)[1]
-  locname1     = cy.path_clist_org("vortlw", DTime1)[1]
-  xname1       = cy.path_clist_org("x", DTime1)[1]
-  yname1       = cy.path_clist_org("y", DTime1)[1]
-
-  preposname1  = cy.path_clist_org("prepos", DTime1)[1]
-  iposname1    = cy.path_clist_org("ipos",   DTime1)[1]
-  idatename1   = cy.path_clist_org("idate",  DTime1)[1]
-  agename1     = cy.path_clist_org("age",   DTime1)[1]
-  #wdifname1    = cy.path_clist_org("wdif",   DTime1)[1]
+  pgradname1   = cy.path_a2dat("pgrad",  DTime1).srcPath
+  locname1     = cy.path_a2dat("vortlw", DTime1).srcPath
+  preposname1  = cy.path_a2dat("prepos", DTime1).srcPath
+  #pgmaxname1   = cy.path_a2dat("pgmax",  DTime1).srcPath
+  iposname1    = cy.path_a2dat("ipos",   DTime1).srcPath
+  idatename1   = cy.path_a2dat("idate",  DTime1).srcPath
+  agename1    = cy.path_a2dat("age",   DTime1).srcPath
 
   #***************************************
   # read data
@@ -238,123 +227,49 @@ for idt, DTime in enumerate(lDTime):
   print "iposname0"
   print iposname0
   if ( os.access(iposname0, os.F_OK) ):
-    a1slp0   = np.load(slpname0)
-    a1pbox0  = np.load(pboxname0)
-    a1loc0   = np.load(locname0)
-    a1y0     = np.load(yname0)
-    a1x0     = np.load(xname0)
-
-    a1pdif0  = a1pbox0 - a1slp0
-
-    a2pdif0  = np.full([ny,nx], miss_dbl, 'float32')
-    a2loc0  = np.full([ny,nx], miss_dbl, 'float32')
-
-    a2pdif0[a1y0,a1x0] = a1pdif0
-    a2loc0 [a1y0,a1x0] = a1loc0
-
+    a2pgrad0   = fromfile(pgradname0,   float32).reshape(ny, nx)
+    a2loc0     = fromfile(locname0,     float32).reshape(ny, nx)
     a2ua0      = fromfile(uaname0,      float32).reshape(ny, nx)
     a2va0      = fromfile(vaname0,      float32).reshape(ny, nx)
-
     #--
-    print preposname0
-    a1prepos0 = np.load(preposname0)
-    a1ipos0   = np.load(iposname0)
-    a1idate0  = np.load(idatename0) 
-
-    a2prepos0 = np.full([ny,nx], miss_int, 'int32')
-    a2ipos0   = np.full([ny,nx], miss_int, 'int32')
-    a2idate0  = np.full([ny,nx], miss_int, 'int32')
-
-    a2prepos0[a1y0,a1x0] = a1prepos0
-    a2ipos0  [a1y0,a1x0] = a1ipos0
-    a2idate0 [a1y0,a1x0] = a1idate0
-
-    #-- 
-    #try: 
-    #  a1age0    = np.load(agename0)
-    #except IOError:
-    #  a1age0    = np.load(timename0)
+    a2prepos0 = fromfile(preposname0, int32).reshape(ny, nx)
+    #a2pgmax0   = fromfile(pgmaxname0,   float32).reshape(ny, nx)
+    a2ipos0    = fromfile(iposname0,    int32).reshape(ny, nx)
+    a2idate0   = fromfile(idatename0,   int32).reshape(ny, nx)
  
-    a1age0    = np.load(agename0)
-    a2age0    = np.full([ny,nx], miss_int, 'int32')
-    a2age0[a1y0,a1x0] = a1age0
-
-    #a1wdif0   = np.load(wdifname0)
-    #a2wdif0   = np.full([ny,nx], miss_dbl, 'float32')
-    #a2wdif0[a1y0,a1x0] = a1wdif0
-
-
+    #-- 
+    try: 
+      a2age0    = fromfile(agename0,    int32).reshape(ny, nx)
+    except IOError:
+      a2age0    = fromfile(timename0,   int32).reshape(ny, nx)
+ 
   elif ( counter == 1):
-    a2pdif0    = np.full([ny,nx], miss_dbl, float32)
-    a2loc0     = np.full([ny,nx], miss_dbl, float32)
-    a2ua0      = np.full([ny,nx], miss_dbl, float32)
-    a2va0      = np.full([ny,nx], miss_dbl, float32)
+    a2pgrad0    = array(ones(ny*nx).reshape(ny,nx)*miss_dbl, float32)
+    a2loc0     = array(ones(ny*nx).reshape(ny,nx)*miss_dbl, float32)
+    a2ua0      = array(zeros(ny*nx).reshape(ny,nx), float32)
+    a2va0      = array(zeros(ny*nx).reshape(ny,nx), float32)
     #--
-    a2prepos0  = np.full([ny,nx], miss_int, int32)
-    a2ipos0    = np.full([ny,nx], miss_int, int32)
-    a2idate0   = np.full([ny,nx], miss_int, int32)
-    a2age0     = np.full([ny,nx], miss_int, int32)
-
-    #a2wdif0    = np.full([ny,nx], miss_dbl, float32)
-
+    a2prepos0 = array(ones(ny*nx).reshape(ny,nx)*miss_int, int32)
+    #a2pgmax0   = array(ones(ny*nx).reshape(ny,nx)*miss_dbl, float32)
+    a2ipos0    = array(ones(ny*nx).reshape(ny,nx)*miss_int, int32)
+    a2idate0   = array(ones(ny*nx).reshape(ny,nx)*miss_int, int32)
+    a2age0    = array(ones(ny*nx).reshape(ny,nx)*miss_int, int32)
   else:
     print "nofiles: DTime0 = ",DTime0
     print "iposname0 =", iposname0
     sys.exit()
-
-  #if ( os.access(iposname0, os.F_OK) ):
-  #  a2pgrad0   = fromfile(pgradname0,   float32).reshape(ny, nx)
-  #  a2loc0     = fromfile(locname0,     float32).reshape(ny, nx)
-  #  a2ua0      = fromfile(uaname0,      float32).reshape(ny, nx)
-  #  a2va0      = fromfile(vaname0,      float32).reshape(ny, nx)
-  #  #--
-  #  a2prepos0 = fromfile(preposname0, int32).reshape(ny, nx)
-  #  a2ipos0    = fromfile(iposname0,    int32).reshape(ny, nx)
-  #  a2idate0   = fromfile(idatename0,   int32).reshape(ny, nx)
- 
-  #  #-- 
-  #  try: 
-  #    a2age0    = fromfile(agename0,    int32).reshape(ny, nx)
-  #  except IOError:
-  #    a2age0    = fromfile(timename0,   int32).reshape(ny, nx)
- 
-  #elif ( counter == 1):
-  #  a2pgrad0    = array(ones(ny*nx).reshape(ny,nx)*miss_dbl, float32)
-  #  a2loc0     = array(ones(ny*nx).reshape(ny,nx)*miss_dbl, float32)
-  #  a2ua0      = array(zeros(ny*nx).reshape(ny,nx), float32)
-  #  a2va0      = array(zeros(ny*nx).reshape(ny,nx), float32)
-  #  #--
-  #  a2prepos0 = array(ones(ny*nx).reshape(ny,nx)*miss_int, int32)
-  #  a2ipos0    = array(ones(ny*nx).reshape(ny,nx)*miss_int, int32)
-  #  a2idate0   = array(ones(ny*nx).reshape(ny,nx)*miss_int, int32)
-  #  a2age0    = array(ones(ny*nx).reshape(ny,nx)*miss_int, int32)
-  #else:
-  #  print "nofiles: DTime0 = ",DTime0
-  #  print "iposname0 =", iposname0
-  #  sys.exit()
   #------------
   #   for 1
   #************
-  a1slp1    = np.load(slpname1)
-  a1pbox1   = np.load(pboxname1)
-  a1loc1    = np.load(locname1)
-  a1y1      = np.load(yname1)
-  a1x1      = np.load(xname1)
+  a2pgrad1     = fromfile(pgradname1, float32).reshape(ny, nx)
+  a2loc1       = fromfile(locname1, float32).reshape(ny, nx)
 
-  a1pdif1   = a1pbox1 - a1slp1
 
-  a2pdif1   = np.full([ny,nx], miss_dbl, float32)
-  a2loc1    = np.full([ny,nx], miss_dbl, float32)
-  a2pdif1[a1y1,a1x1] = a1pdif1
-  a2loc1 [a1y1,a1x1] = a1loc1
-
-  #a2pgrad1     = fromfile(pgradname1, float32).reshape(ny, nx)
-  #a2loc1       = fromfile(locname1, float32).reshape(ny, nx)
   #*********************
-  # mask pdif < thpdif and high altitudes
+  # mask pgrad < thpgrad and high altitudes
   #*********************
-  a2loc0   = ma.masked_where(a2pdif0 < thpdif, a2loc0)
-  a2loc1   = ma.masked_where(a2pdif1 < thpdif, a2loc1)
+  a2loc0   = ma.masked_where(a2pgrad0 < thpgrad, a2loc0)
+  a2loc1   = ma.masked_where(a2pgrad1 < thpgrad, a2loc1)
 
   a2loc0   = ma.masked_where(a2mask_topo.mask, a2loc0).filled(miss_dbl)
   a2loc1   = ma.masked_where(a2mask_topo.mask, a2loc1).filled(miss_dbl)
@@ -392,20 +307,11 @@ for idt, DTime in enumerate(lDTime):
   #****************************************
   # write to file
   #----------------------------------------
-  a1prepos1 = a2prepos1[a1y1,a1x1]
-  a1ipos1   = a2ipos1  [a1y1,a1x1]
-  a1idate1  = a2idate1 [a1y1,a1x1]
-  a1age1    = a2age1   [a1y1,a1x1]
-
-  np.save(preposname1,  a1prepos1)
-  np.save(iposname1,    a1ipos1)
-  np.save(idatename1,   a1idate1)
-  np.save(agename1,     a1age1)
-
-  #a2prepos1.tofile(preposname1)
-  #a2ipos1.tofile(iposname1)
-  #a2idate1.tofile(idatename1)
-  #a2age1.tofile(agename1)
+  a2prepos1.tofile(preposname1)
+  #a2pgmax1.tofile(pgmaxname1)
+  a2ipos1.tofile(iposname1)
+  a2idate1.tofile(idatename1)
+  a2age1.tofile(agename1)
   
 
 

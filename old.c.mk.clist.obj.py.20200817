@@ -3,7 +3,7 @@ from numpy import *
 from detect_fsub import *
 from datetime import datetime, timedelta
 import util
-import numpy as np
+#import config
 import IO_Master
 import Cyclone
 import ConstCyclone
@@ -33,9 +33,8 @@ noleap  = False
 dbbaseDir = '/home/utsumi/mnt/lab_work/hk01/d4PDF_GCM'
 wsbaseDir = '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
 
-iDTime = datetime(2000,1,1,0)
-#iDTime = datetime(2010,12,1,0)
-eDTime = datetime(2010,12,31,18)
+iDTime = datetime(2010,1,1,0)
+eDTime = datetime(2010,1,5,0)
 
 #iDTime = datetime(2006,1,1,6)   # HAPPI
 #eDTime = datetime(2014,12,31,18)  # HAPPI
@@ -80,41 +79,7 @@ const['Lon'] = iom.Lon
 wsDir = wsbaseDir + '/%s'%(run)
 cy     = Cyclone.Cyclone(baseDir=wsDir, const=const)
 
-
-
-#['lat','lon','nowpos','age','dura','epos','idate','ipos','nextpos','prepos','slp','slp_mean_adj','slp_mean_box','vortlw','vortlw_max_box','x','y','time']
-
-ddtype={
-    'lat':'float32',
-    'lon':'float32',
-    'nowpos':'int32',
-    'age':'int32',
-    'dura':'int32',
-    'epos':'int32',
-    'idate':'int32',
-    'ipos':'int32',
-    'nextpos':'int32',
-    'prepos':'int32',
-    'slp':'float32',
-    'slp_mean_adj':'float32',
-    'slp_mean_box':'float32',
-    'vortlw':'float32',
-    'vortlw_max_box':'float32',
-    'x':'int32',
-    'y':'int32',
-    'time':'int32',
-    'iedist':'float32',
-}
-
-
-
 #*********** functions *********
-def mk_dir(sdir):
-  try:
-    os.makedirs(sdir)
-  except:
-    pass
-
 def ret_a1iedist(a1ipos, a1epos):
   miss     = -9999.
   a1nx   = ones(len(a1ipos))*nx
@@ -164,9 +129,9 @@ for idt, DTime in enumerate(lDTime):
     print DTime.year, DTime.month
     a2num  = zeros([ny,nx],float32).reshape(ny,nx)
     #--------------
-    #lstype_ex  = ["dura","pgrad","vortlw","lat","lon","ipos","epos","idate","nowpos","time","prepos","nextpos"]
-    lstype_ex  = ['lat','lon','nowpos','age','dura','epos','idate','ipos','nextpos','prepos','slp','slp_mean_adj','slp_mean_box','vortlw','vortlw_max_box','x','y','time']
-
+    #lstype  = ["rvort","dtlow","dtmid","dtup","wmeanlow","wmeanup","wmaxlow","dura","pgrad","sst","lat","lon","ipos","idate","nowpos","time","prepos","nextpos"]
+    lstype_ex  = ["dura","pgrad","vortlw","lat","lon","ipos","epos","idate","nowpos","time","prepos","nextpos"]
+    #lstype_tc  = ["rvort","dtlow","dtmid","dtup","wmeanlow","wmeanup","wmaxlow","sst"]
     da1     = {}
 
     #for stype in lstype_ex + lstype_tc:
@@ -177,70 +142,48 @@ for idt, DTime in enumerate(lDTime):
       #  da1[stype] = array([],float32)
       da1[stype] = collections.deque([])
   #-------------
+  a2pgrad         =cy.load_a2dat("pgrad"  ,DTime) 
+  a2vortlw        =cy.load_a2dat("vortlw" ,DTime) 
+  a2dura          =cy.load_a2dat("dura"   ,DTime) 
+  a2ipos          =cy.load_a2dat("ipos"   ,DTime) 
+  a2epos          =cy.load_a2dat("epos"   ,DTime) 
+  a2idate         =cy.load_a2dat("idate"  ,DTime) 
+  a2prepos        =cy.load_a2dat("prepos",DTime) 
+  a2nextpos       =cy.load_a2dat("nextpos",DTime) 
+
   #a2dura          = detect_fsub.solvelife_dura(a2life.T, miss_int).T 
   #---- shrink ---------------------
-  a1age_tmp   = cy.load_clist_org('age',DTime) 
-  a1dura_tmp  = cy.load_clist_org('dura',DTime) 
-  a1idate_tmp = cy.load_clist_org('idate',DTime) 
-  a1ipos_tmp         = cy.load_clist_org('ipos',DTime) 
-  a1epos_tmp         = cy.load_clist_org('epos',DTime) 
-  a1prepos_tmp       = cy.load_clist_org('prepos',DTime) 
-  a1nextpos_tmp      = cy.load_clist_org('nextpos',DTime) 
-  a1slp_tmp          = cy.load_clist_org('slp',DTime) 
-  a1slp_mean_adj_tmp = cy.load_clist_org('slp_mean_adj',DTime) 
-  a1slp_mean_box_tmp = cy.load_clist_org('slp_mean_box',DTime) 
-  a1vortlw_tmp         = cy.load_clist_org('vortlw',DTime) 
-  a1vortlw_max_box_tmp = cy.load_clist_org('vortlw_max_box',DTime) 
-  a1x_tmp      = cy.load_clist_org('x',DTime) 
-  a1y_tmp      = cy.load_clist_org('y',DTime) 
-  a1lat_tmp    = a1lat[a1y_tmp]
-  a1lon_tmp    = a1lon[a1x_tmp]
-  a1nowpos_tmp = a2nowpos[a1y_tmp, a1x_tmp]
+  a1dura_tmp      = ma.masked_where( a2pgrad==miss, a2dura     ).compressed()
+  a1dura_tmp      = array(a1dura_tmp, int32)
 
-  #--- Screenig ----
-  a1flag = ma.masked_greater_equal(a1dura_tmp, 0).mask
-
-  a1age_tmp             = a1age_tmp           [a1flag]  
-  a1dura_tmp            = a1dura_tmp          [a1flag]  
-  a1idate_tmp           = a1idate_tmp         [a1flag] 
-  a1ipos_tmp            = a1ipos_tmp          [a1flag]   
-  a1epos_tmp            = a1epos_tmp          [a1flag]   
-  a1prepos_tmp          = a1prepos_tmp        [a1flag]   
-  a1nextpos_tmp         = a1nextpos_tmp       [a1flag]     
-  a1slp_tmp             = a1slp_tmp           [a1flag]   
-  a1slp_mean_adj_tmp    = a1slp_mean_adj_tmp  [a1flag]
-  a1slp_mean_box_tmp    = a1slp_mean_box_tmp  [a1flag]
-  a1vortlw_tmp          = a1vortlw_tmp        [a1flag] 
-  a1vortlw_max_box_tmp  = a1vortlw_max_box_tmp[a1flag]
-  a1x_tmp               = a1x_tmp             [a1flag]
-  a1y_tmp               = a1y_tmp             [a1flag]
-  a1lat_tmp             = a1lat_tmp           [a1flag]
-  a1lon_tmp             = a1lon_tmp           [a1flag]
-  a1nowpos_tmp          = a1nowpos_tmp        [a1flag]
-
+  a1pgrad_tmp     = ma.masked_where( a2pgrad==miss, a2pgrad    ).compressed()
+  a1vortlw_tmp    = ma.masked_where( a2pgrad==miss, a2vortlw   ).compressed()
+  a1lat_tmp       = ma.masked_where( a2pgrad==miss, a2lat      ).compressed()
+  a1lon_tmp       = ma.masked_where( a2pgrad==miss, a2lon      ).compressed()
+  a1ipos_tmp      = ma.masked_where( a2pgrad==miss, a2ipos     ).compressed()
+  a1epos_tmp      = ma.masked_where( a2pgrad==miss, a2epos     ).compressed()
+  a1idate_tmp     = ma.masked_where( a2pgrad==miss, a2idate    ).compressed()
+  a1nowpos_tmp    = ma.masked_where( a2pgrad==miss, a2nowpos   ).compressed()
+  a1prepos_tmp   = ma.masked_where( a2pgrad==miss, a2prepos  ).compressed()
+  a1nextpos_tmp   = ma.masked_where( a2pgrad==miss, a2nextpos  ).compressed()
   #--- a1time ------
   time            = year*10**6 + mon*10**4 + day*10**2 + hour
-  a1time_tmp      = np.full(len(a1slp_tmp), time ,int32)
+  a1time_tmp      = ones( len(a1pgrad_tmp) ,int32) *time
 
   #-----------------
-  da1["age"    ].extend( a1age_tmp     )
-  da1["dura"   ].extend( a1dura_tmp    )
-  da1["idate"  ].extend( a1idate_tmp   )
-  da1["ipos"   ].extend( a1ipos_tmp    )
-  da1["epos"   ].extend( a1epos_tmp    )
-  da1["prepos" ].extend( a1prepos_tmp    )
-  da1["nextpos"].extend( a1nextpos_tmp    )
-  da1["nowpos" ].extend( a1nowpos_tmp    )
-  da1["slp"    ].extend( a1slp_tmp    )
-  da1["slp_mean_adj"].extend( a1slp_mean_adj_tmp )
-  da1["slp_mean_box"].extend( a1slp_mean_box_tmp )
+  da1["dura"    ].extend( a1dura_tmp     )
+  da1["pgrad"   ].extend( a1pgrad_tmp    )
   da1["vortlw"  ].extend( a1vortlw_tmp   )
-  da1["vortlw_max_box"].extend( a1vortlw_max_box_tmp   )
-  da1["x"     ].extend( a1x_tmp      )
-  da1["y"     ].extend( a1y_tmp      )
   da1["lat"     ].extend( a1lat_tmp      )
   da1["lon"     ].extend( a1lon_tmp      )
+  da1["ipos"    ].extend( a1ipos_tmp     )
+  da1["epos"    ].extend( a1epos_tmp     )
+  da1["idate"   ].extend( a1idate_tmp    )
+  da1["nowpos"  ].extend( a1nowpos_tmp   )
   da1["time"    ].extend( a1time_tmp     )
+  da1["prepos" ].extend( a1prepos_tmp    )
+  da1["nextpos" ].extend( a1nextpos_tmp  )
+
 
   if ((DTime==lDTime[-1])or(DTime.month != lDTime[idt+1].month)):
     ##---- iedist ------------------------
@@ -248,16 +191,20 @@ for idt, DTime in enumerate(lDTime):
   
     #----- make dir ----
     sodir  = cy.path_clist("ipos", year, mon)[0]
-    mk_dir(sodir)
+    detect_func.mk_dir(sodir)
   
     #---- save --
     _lstype = lstype_ex + ["iedist"]
     #_lstype = lstype_ex
     
     for stype in _lstype:
-      datatype = ddtype[stype]
       soname = cy.path_clist(stype, year, mon)[1]
-      a1out  = np.array(da1[stype]).astype(datatype)
-      np.save(soname, a1out)
-    print soname
+      
+      if stype in ["dura","ipos","epos","idate","nowpos","time","prepos","nextpos"]:
+        a1out = array( da1[stype] ,int32   )
+      else:
+        a1out = array( da1[stype] ,float32 )
+  
+      a1out.tofile(soname)
+      print soname
   

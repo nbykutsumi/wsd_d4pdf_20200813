@@ -9,7 +9,7 @@ import pygrib
 class snp_6hr_2byte(object):
     def __init__(self, vtype=None, dbbaseDir=None):
         if dbbaseDir is None:
-            self.dbbaseDir = '/home/utsumi/mnt/lab_work/hk01/d4PDF_GCM'
+            self.dbbaseDir = '/home/utsumi/mnt/lab_work_hk03/d4PDF_GCM'
         else:
             self.dbbaseDir = dbbaseDir
 
@@ -127,7 +127,7 @@ class snp_6hr_2byte(object):
 class avr_mon_320x640(object):
     def __init__(self, vtype=None, dbbaseDir=None):
         if dbbaseDir is None:
-            self.dbbaseDir = '/home/utsumi/mnt/lab_work/hk01/d4PDF_GCM'
+            self.dbbaseDir = '/home/utsumi/mnt/lab_work_hk03/d4PDF_GCM'
         else:
             self.dbbaseDir = dbbaseDir
 
@@ -228,7 +228,11 @@ def load_topo_TL319(dbbaseDir=None, vname='height', miss_fill=None):
     ny,nx   = 320, 640
     miss    = -9.99e+33  
     vidx    = {'height':0, 'ratiol':1}[vname]
+
+    #dbbaseDir = '/home/utsumi/mnt/lab_work/hk01/d4PDF_GCM'   # temporary
+
     srcPath = dbbaseDir + '/fixed/TopogRatiol_gsmuv_TL319.gd'
+    #srcPath = '/home/utsumi/mnt/lab_work/hk01/d4PDF_GCM'+ '/fixed/TopogRatiol_gsmuv_TL319.gd'
     data    = ma.masked_equal(np.fromfile(srcPath, 'float32').byteswap().reshape(2,ny,nx)[vidx], miss)
     if miss_fill is not None:
         data = data.filled(miss_fill)

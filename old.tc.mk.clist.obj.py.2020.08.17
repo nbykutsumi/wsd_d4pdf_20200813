@@ -2,14 +2,13 @@ from numpy import *
 from collections import deque
 from datetime import datetime, timedelta
 from detect_fsub import *
-from detect_func import box_filtering
 import detect_func
 import calendar
 import util
+#import config
 import IO_Master
 import ConstCyclone
 import Cyclone
-import numpy as np
 import os, sys
 ##--------------------------------------
 #prj   = "JRA55"
@@ -33,12 +32,12 @@ run     = "XX-HPB-001"   # {expr}-{scen}-{ens}
 res     = "320x640"
 plev_up  = 300
 noleap  = False
-dbbaseDir = '/home/utsumi/mnt/lab_work/hk01/d4PDF_GCM'
+dbbaseDir = '/home/utsumi/mnt/lab_work/hk02/d4PDF_GCM'
 wsbaseDir = '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
 
 
-iDTime = datetime(2000,1,1,0)
-eDTime = datetime(2010,12,31,18)
+iDTime = datetime(2010,1,1,0)
+eDTime = datetime(2010,1,5,0)
 
 #iDTime = datetime(2006,1,1,6)
 #eDTime = datetime(2015,1,1,0)
@@ -46,7 +45,7 @@ eDTime = datetime(2010,12,31,18)
 #-- argv ----------------
 largv = sys.argv
 if len(largv)>1:
-  prj, model, run, res, noleap, dbbaseDir, wsbaseDir = largv[1:1+7]
+  prj, model, run, res, noleap, dbbseDir, wsbaseDir = largv[1:1+7]
   if noleap=="True": noleap=True
   elif noleap=="False": noleap=False
   else: print "check noleap",noleap; sys.exit()
@@ -85,17 +84,11 @@ unitdist  = 10.0 # km / hour
 #----------------
 miss  = -9999.
 #lvar  = ["rvort", "dtlow", "dtmid", "dtup", "wmeanlow", "wmeanup", "sst","land"]
-#lvar  = ["dtlow", "dtmid", "dtup", "wmeanlow", "wmeanup", "sst","land"]
-lvar  = ["dtlw", "dtmd", "dtup", "wmaxlw", "wmaxup", "sst","land"]
+lvar  = ["dtlow", "dtmid", "dtup", "wmeanlow", "wmeanup", "sst","land"]
+
 
 a1lat = cy.Lat
 a1lon = cy.Lon
-
-dlon = a1lon[1] - a1lon[0]
-dlat = (a1lat[1:] - a1lat[:-1]).mean()
-
-dx_4deg = int(4.0/dlon)
-dy_4deg = int(4.0/dlat)
 
 def save_clist(var, a1dat, Year, Mon):
   clistDir, clistPath = cy.path_clist(var, Year, Mon)
@@ -110,8 +103,6 @@ def ret_a2pgrad(DTime):
 
 #----------------------------
 for idt, DTime in enumerate(lDTime):
-  print DTime
-
   if ((idt==0)or(DTime.month != lDTime[idt-1].month)):
     Year = DTime.year
     Mon  = DTime.month
@@ -129,75 +120,47 @@ for idt, DTime in enumerate(lDTime):
     #-------------------- 
     a2land= iom.Load_const("land")
   #-------------------- 
-  a1y    = cy.load_clist_org('y', DTime)
-  a1x    = cy.load_clist_org('x', DTime)
-
-  #-- SST and Land ----
-  a1sst    = a2sst[a1y,a1x]
-  a1land   = a2land[a1y,a1x]
-
-  #-- Screening -------
-  a1dura   = cy.load_clist_org('dura', DTime)
-  a1flag   = ma.masked_greater_equal(a1dura,0).mask
-
-  a1y    = a1y[a1flag]
-  a1x    = a1x[a1flag]
-  a1sst  = a1sst[a1flag]
-  a1land = a1land[a1flag]
-
-  #--------------------
-  a2tlw   = iom.Load_6hrPlev("ta",DTime,850)
-  a2tmd   = iom.Load_6hrPlev("ta",DTime,500)
+  a2pgrad = cy.load_a2dat("pgrad",DTime)
+  a2tlow  = iom.Load_6hrPlev("ta",DTime,850)
+  a2tmid  = iom.Load_6hrPlev("ta",DTime,500)
   a2tup   = iom.Load_6hrPlev("ta",DTime,plev_up)
-  a2ulw   = iom.Load_6hrPlev("ua",DTime,850)
+  a2ulow  = iom.Load_6hrPlev("ua",DTime,850)
   a2uup   = iom.Load_6hrPlev("ua",DTime,plev_up)
-  a2vlw   = iom.Load_6hrPlev("va",DTime,850)
+  a2vlow  = iom.Load_6hrPlev("va",DTime,850)
   a2vup   = iom.Load_6hrPlev("va",DTime,plev_up)
-
-
   
-  #-- Maximum and mean temperature ----------
-  a1tmaxup = box_filtering(a2tup, a1y, a1x, dy_4deg, dx_4deg, func='max', miss_in=miss, miss_out=miss) 
+  tout = detect_fsub.calc_tcvar\
+        (  a2pgrad.T, a2tlow.T, a2tmid.T, a2tup.T\
+         , a2ulow.T, a2uup.T, a2vlow.T, a2vup.T\
+         , a1lon, a1lat\
+         , miss\
+        )
 
-  a1tmaxmd = box_filtering(a2tmd, a1y, a1x, dy_4deg, dx_4deg, func='max', miss_in=miss, miss_out=miss) 
+  a2dtlow    = tout[0].T 
+  a2dtmid    = tout[1].T 
+  a2dtup     = tout[2].T 
+  a2wmeanlow = tout[3].T 
+  a2wmeanup  = tout[4].T 
 
-  a1tmaxlw = box_filtering(a2tlw, a1y, a1x, dy_4deg, dx_4deg, func='max', miss_in=miss, miss_out=miss) 
+  #---- shrink ---------------------
+  #a1rvort_tmp     = ma.masked_where( a2pgrad==miss, a2rvort    ).compressed()
+  a1dtlow_tmp     = ma.masked_where( a2pgrad==miss, a2dtlow    ).compressed()
+  a1dtmid_tmp     = ma.masked_where( a2pgrad==miss, a2dtmid    ).compressed()
+  a1dtup_tmp      = ma.masked_where( a2pgrad==miss, a2dtup     ).compressed()
+  a1wmeanlow_tmp  = ma.masked_where( a2pgrad==miss, a2wmeanlow ).compressed()
+  a1wmeanup_tmp   = ma.masked_where( a2pgrad==miss, a2wmeanup  ).compressed()
+  a1sst_tmp       = ma.masked_where( a2pgrad==miss, a2sst      ).compressed()
+  a1land_tmp      = ma.masked_where( a2pgrad==miss, a2land     ).compressed()
 
-  a1taveup = box_filtering(a2tup, a1y, a1x, dy_4deg, dx_4deg, func='mean', miss_in=miss, miss_out=miss) 
-
-  a1tavemd = box_filtering(a2tmd, a1y, a1x, dy_4deg, dx_4deg, func='mean', miss_in=miss, miss_out=miss) 
-
-  a1tavelw = box_filtering(a2tlw, a1y, a1x, dy_4deg, dx_4deg, func='mean', miss_in=miss, miss_out=miss) 
-
-  a1dtup   = (ma.masked_equal(a1tmaxup,miss) - ma.masked_equal(a1taveup,miss)).filled(miss)
-
-  a1dtmd   = (ma.masked_equal(a1tmaxmd,miss) - ma.masked_equal(a1tavemd,miss)).filled(miss)
-
-  a1dtlw   = (ma.masked_equal(a1tmaxlw,miss) - ma.masked_equal(a1tavelw,miss)).filled(miss)
-
-  #-- Maximum wind ----------
-  a2wup   = np.sqrt( np.square(ma.masked_equal(a2uup,miss)) + np.square(ma.masked_equal(a2vup,miss)) )
-
-  a2wlw   = np.sqrt( np.square(ma.masked_equal(a2ulw,miss)) + np.square(ma.masked_equal(a2vlw,miss)) )
-
-  a1wmaxup = box_filtering(a2wup, a1y, a1x, dy_4deg, dx_4deg, func='max', miss_in=miss, miss_out=miss) 
-
-  a1wmaxlw = box_filtering(a2wlw, a1y, a1x, dy_4deg, dx_4deg, func='max', miss_in=miss, miss_out=miss) 
-
-  #--------------------
-  da1["dtlw"  ].extend( a1dtlw  )
-  da1["dtmd"  ].extend( a1dtmd  )
-  da1["dtup"  ].extend( a1dtup  )
-  da1["wmaxlw"].extend( a1wmaxlw)
-  da1["wmaxup"].extend( a1wmaxup)
-  da1["sst"   ].extend( a1sst   )
-  da1["land"  ].extend( a1land  )
-
-
+  #da1["rvort"   ].extend( a1rvort_tmp   )
+  da1["dtlow"   ].extend( a1dtlow_tmp   )
+  da1["dtmid"   ].extend( a1dtmid_tmp   )
+  da1["dtup"    ].extend( a1dtup_tmp    )
+  da1["wmeanlow"].extend( a1wmeanlow_tmp)
+  da1["wmeanup" ].extend( a1wmeanup_tmp )
+  da1["sst"     ].extend( a1sst_tmp     )
+  da1["land"    ].extend( a1land_tmp    )
   #- write clist --
   if ((DTime==lDTime[-1])or(DTime.month != lDTime[idt+1].month)):
     for var in lvar:
-      a1out = np.array(da1[var], float32)
-      outpath = cy.path_clist(var, Year, Mon)[1]
-      np.save(outpath, a1out)
-      print len(a1out), a1out.dtype, outpath
+      save_clist(var, da1[var], Year, Mon)

@@ -45,12 +45,21 @@ def Const(prj=None,model=None):
       #print "thwcore",self.thwcore 
 
     elif (prj=="d4PDF"):
-      cst['thpgrad_min'] = 300  # Pa/1000km , for connect.fwd
+      cst['thpdif_min'] = 50  # Pa Mean(8deg x 8deg box) - Center for connect.fwd
       cst['rvort_min'] = 3*1.0e-5  # s-1, for connect.fwd
-      cst['thpgrad'] = 325.0      # Pa/1000km lower 5% of ExC
-      cst['exrvort'] = 3.7*1.0e-5 *1.3     # s-1  lower 5%
-      cst['tcrvort'] = 3.7*1.0e-5 *1.3 *1.3# s-1  lower 5%
-      cst['thwcore'] = 0.2        # K  lower 5% (approx.)
+      #cst['thpgrad'] = 325.0      # Pa/1000km lower 5% of ExC
+      cst['exrvort'] = 3.0*1.0e-5 # s-1
+      cst['tcrvort'] = 5*1.0e-5 # s-1 
+      cst['thwcore'] = 3.0        # K
+      cst['thwind' ] = 15.   # max-wind@850hPa [m/h]
+      cst['thwdif' ] = -9999.
+
+      #cst['thpgrad_min'] = 300  # Pa/1000km , for connect.fwd
+      #cst['rvort_min'] = 3*1.0e-5  # s-1, for connect.fwd
+      #cst['thpgrad'] = 325.0      # Pa/1000km lower 5% of ExC
+      #cst['exrvort'] = 3.7*1.0e-5 *1.3     # s-1  lower 5%
+      #cst['tcrvort'] = 3.7*1.0e-5 *1.3 *1.3# s-1  lower 5%
+      #cst['thwcore'] = 0.2        # K  lower 5% (approx.)
 
       #cst['thpgrad'] = 0      # Pa/1000km lower 5% of ExC
       #cst['exrvort'] = 0     # s-1  lower 5%

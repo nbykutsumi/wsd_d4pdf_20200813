@@ -1,28 +1,42 @@
 import subprocess
 import os, sys
 import util
-
+import socket
 
 prj     = "d4PDF"
 model   = "__"
 expr    = 'XX'
-#scen    = 'HPB'
-scen    = 'HPB_NAT'
-#lens    = range(1,10+1)
+scen    = 'HPB'
+#scen    = 'HPB_NAT'
 #lens    = range(1,9+1)
-#lens    = range(1,9+1)
-lens    = [1]
+#lens    = range(5,13+1)
+#lens    = range(1,50+1)
+#lens    = range(14,20+1)
+#lens    = range(23,31+1)
+#lens    = range(20,35+1)   # NAT on shui
+#lens    = range(37,50+1)   # NAT on shui
+lens    = range(32,50+1)   # NAT on shui
+
+#lens    = [1]
 lrun    = ['%s-%s-%03d'%(expr,scen,ens) for ens in lens]
 #lrun     = ["XX-HPB-001"]   # {expr}-{scen}-{ens}
 res     = "320x640"
 noleap  = False
 tstp_runmean = "6hr"
 logDir = "/home/utsumi/log"
-dbbaseDir = '/home/utsumi/mnt/lab_work/hk01/d4PDF_GCM'
-wsbaseDir = '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
 
-#iYear, iMon = [2000,1] # Start of the detection period
-#eYear, eMon = [2010,12] # End of the detection period 
+myhost = socket.gethostname()
+if myhost == 'well':
+    #dbbaseDir = '/home/utsumi/mnt/lab_work/hk01/d4PDF_GCM'
+    dbbaseDir = '/home/utsumi/mnt/lab_work_hk03/d4PDF_GCM'
+    wsbaseDir = '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
+elif myhost == 'shui':
+    dbbaseDir = '/work/hk03/d4PDF_GCM'
+    wsbaseDir = '/tank/utsumi/WS/d4PDF_GCM'
+
+
+iYear, iMon = [1990,1] # Start of the detection period
+eYear, eMon = [2010,12] # End of the detection period 
 #iYear, iMon = [2010,1] # Start of the detection period
 #eYear, eMon = [2010,12] # End of the detection period 
 
@@ -146,39 +160,41 @@ for run in lrun:
     exec_func(cmd)
     '''
      
-    ##*********************************
-    ## Cyclone (ExC and TC)
-    ##---------------------------------
-    #cmd = ["python","c.runmean.wind.py"
-    #        , prj, model, run, res, tstp_runmean, noleap
-    #        , dbbaseDir, wsbaseDir
-    #        , iYear, iMon, eYear, eMon
-    #    ]
-    #exec_func(cmd)
-    #
-    #cmd = ["python","c.findcyclone.py"
-    #        , prj, model, run, res, noleap
-    #        , dbbaseDir, wsbaseDir
-    #        , iYear, iMon, eYear, eMon
-    #    ]
-    #exec_func(cmd)
-    #
-    #cmd = ["python","c.connectc.fwd.py"
-    #        , prj, model, run, res, noleap
-    #        , dbbaseDir, wsbaseDir
-    #        , iYear, iMon, eYear, eMon
-    #    ]
-    #exec_func(cmd)
-    #
-    ##flagresume = False
-    #flagresume = True
-    #cmd = ["python","c.connectc.bwd.py"
-    #        , prj, model, run, res, noleap, flagresume
-    #        , dbbaseDir, wsbaseDir
-    #        , iYear, iMon, eYear, eMon
-    #    ]
-    #exec_func(cmd)
-    #
+    #*********************************
+    # Cyclone (ExC and TC)
+    #---------------------------------
+    ens = int(run.split('-')[-1])
+
+    cmd = ["python","c.runmean.wind.py"
+            , prj, model, run, res, tstp_runmean, noleap
+            , dbbaseDir, wsbaseDir
+            , iYear, iMon, eYear, eMon
+        ]
+    exec_func(cmd)
+    
+    cmd = ["python","c.findcyclone.py"
+            , prj, model, run, res, noleap
+            , dbbaseDir, wsbaseDir
+            , iYear, iMon, eYear, eMon
+        ]
+    exec_func(cmd)
+    
+    cmd = ["python","c.connectc.fwd.py"
+            , prj, model, run, res, noleap
+            , dbbaseDir, wsbaseDir
+            , iYear, iMon, eYear, eMon
+        ]
+    exec_func(cmd)
+    
+    #flagresume = False
+    flagresume = True
+    cmd = ["python","c.connectc.bwd.py"
+            , prj, model, run, res, noleap, flagresume
+            , dbbaseDir, wsbaseDir
+            , iYear, iMon, eYear, eMon
+        ]
+    exec_func(cmd)
+    
     cmd = ["python","c.mk.clist.obj.py"
             , prj, model, run, res, noleap
             , dbbaseDir, wsbaseDir

@@ -2,7 +2,6 @@
 from numpy import *
 from detect_fsub import *
 from datetime import datetime, timedelta
-import numpy as np
 import util
 import config
 import IO_Master
@@ -30,8 +29,8 @@ run     = "XX-HPB-001"   # {expr}-{scen}-{ens}
 res     = "320x640"
 noleap  = False
 
-iDTime = datetime(2000,1,1,0)
-eDTime = datetime(2010,12,31,18)
+iDTime = datetime(2010,1,1,0)
+eDTime = datetime(2010,1,5,0)
 
 #iDTime = datetime(2006,1,1,6)   # HAPPI
 #eDTime = datetime(2014,12,31,18)   # HAPPI
@@ -70,7 +69,6 @@ ret_lDTime = {False: util.ret_lDTime
 
 lDTime   = ret_lDTime(iDTime, eDTime, dDTime)
 lDTimeRev= lDTime[::-1]
-
 
 #cfg          = config.cfg
 #cfg['prj']   = prj    # for ConstCyclone
@@ -170,7 +168,6 @@ a2topo      = iom.Load_const("topo")
 a2mask_topo = ma.masked_greater(a2topo, thtopo)
 #*************************************************
 counter = 0
-nlDTime = len(lDTimeRev)
 for idt, DTime1 in enumerate(lDTimeRev):
 
   if ((DTime1==lDTimeRev[0])or(DTime1.month !=lDTime[idt-1])):
@@ -187,21 +184,9 @@ for idt, DTime1 in enumerate(lDTimeRev):
   if counter == 1:
     #------
     if flgresume == True:
-      #preposnextname1 = cy.path_a2dat("prepos",DTime1+dDTime).srcPath
-      #a2preposnext1   = fromfile(preposnextname1, int32).reshape(ny,nx)
-
-      preposnextname1 = cy.path_clist_org("prepos",DTime1+dDTime)[1]
-      ynextname1      = cy.path_clist_org("y",DTime1+dDTime)[1]
-      xnextname1      = cy.path_clist_org("x",DTime1+dDTime)[1]
-
-      a1preposnext1 = np.load(preposnextname1)
-      a1ynext1      = np.load(ynextname1)
-      a1xnext1      = np.load(xnextname1)
-
-      a2preposnext1 = np.full([ny,nx],miss_int, int32)
-      a2preposnext1[a1ynext1, a1xnext1] = a1preposnext1
-
-      a2nextpos1      = np.full([ny,nx],miss_int, int32)
+      preposnextname1 = cy.path_a2dat("prepos",DTime1+dDTime).srcPath
+      a2preposnext1   = fromfile(preposnextname1, int32).reshape(ny,nx)
+      a2nextpos1      = ones([ny,nx],int32)*miss_int
       for iynext in range(0, ny):
         for ixnext in range(0, nx):
           if (a2preposnext1[iynext, ixnext] != miss_int):
@@ -209,59 +194,28 @@ for idt, DTime1 in enumerate(lDTimeRev):
             a2nextpos1[iy1,ix1] = pyxy2fortpos(ixnext, iynext, nx)
     #------
     else:
-      a2nextpos1    = np.full([ny,nx], miss_int, int32)
+      a2nextpos1    = array(ones(ny*nx).reshape(ny,nx)*miss_int, int32)
 
-
-    #nextposdir1   = cy.path_a2dat("nextpos",DTime1).srcDir
-    #nextposname1  = cy.path_a2dat("nextpos",DTime1).srcPath
-
-    yname1 = cy.path_clist_org("y",DTime1)[1]
-    xname1 = cy.path_clist_org("x",DTime1)[1]
-    a1y1   = np.load(yname1)
-    a1x1   = np.load(xname1)
-
-    nextposdir1  = cy.path_clist_org("nextpos",DTime1)[0]
-    nextposname1 = cy.path_clist_org("nextpos",DTime1)[1]
+    nextposdir1   = cy.path_a2dat("nextpos",DTime1).srcDir
+    nextposname1  = cy.path_a2dat("nextpos",DTime1).srcPath
     mk_dir(nextposdir1)
     #------
-    a1nextpos1 = a2nextpos1[a1y1,a1x1]
-    np.save(nextposname1, a1nextpos1)
-    #a2nextpos1.tofile(nextposname1)
+    a2nextpos1.tofile(nextposname1)
   #----------
 
   #***************************************
   #* names for 1
   #---------------------------------------
-  nextposname1 = cy.path_clist_org("nextpos",DTime1)[1]
-  preposname1  = cy.path_clist_org("prepos",DTime1)[1]
-  agename1     = cy.path_clist_org("age",  DTime1)[1]
-  yname1       = cy.path_clist_org("y",  DTime1)[1]
-  xname1       = cy.path_clist_org("x",  DTime1)[1]
-
-  #nextposname1 = cy.path_a2dat("nextpos",DTime1).srcPath
-  #preposname1  = cy.path_a2dat("prepos",DTime1).srcPath
-  #agename1     = cy.path_a2dat("age",  DTime1).srcPath
+  nextposname1 = cy.path_a2dat("nextpos",DTime1).srcPath
+  preposname1  = cy.path_a2dat("prepos",DTime1).srcPath
+  agename1     = cy.path_a2dat("age",  DTime1).srcPath
   #----------
   # read data
   #**********
   try:
-    a1nextpos1   = np.load(nextposname1)
-    a1prepos1    = np.load(preposname1)
-    a1age1       = np.load(agename1)
-    a1y1         = np.load(yname1)
-    a1x1         = np.load(xname1)
-
-    a2nextpos1   = np.full([ny,nx], miss_int, int32)
-    a2prepos1    = np.full([ny,nx], miss_int, int32)
-    a2age1       = np.full([ny,nx], miss_int, int32)
-
-    a2nextpos1[a1y1,a1x1] = a1nextpos1
-    a2prepos1 [a1y1,a1x1] = a1prepos1
-    a2age1    [a1y1,a1x1] = a1age1
-
-    #a2nextpos1   = fromfile(nextposname1,int32).reshape(ny,nx)
-    #a2prepos1    = fromfile(preposname1, int32).reshape(ny,nx)
-    #a2age1       = fromfile(agename1,    int32).reshape(ny,nx)
+    a2nextpos1   = fromfile(nextposname1,int32).reshape(ny,nx)
+    a2prepos1    = fromfile(preposname1, int32).reshape(ny,nx)
+    a2age1       = fromfile(agename1,    int32).reshape(ny,nx)
   except IOError:
     counter = counter -1
     print "No File:"
@@ -275,25 +229,15 @@ for idt, DTime1 in enumerate(lDTimeRev):
   #--------------------------------------
   if (counter == 1):
     if flgresume == True:
-      duraname2 = cy.path_clist_org("dura",DTime1+dDTime)[1]
-      eposname2 = cy.path_clist_org("epos",DTime1+dDTime)[1]
-      yname2    = cy.path_clist_org("y",DTime1+dDTime)[1]
-      xname2    = cy.path_clist_org("x",DTime1+dDTime)[1]
+      duraname2 = cy.path_a2dat("dura",DTime1+dDTime).srcPath
+      a2dura2   = fromfile(duraname2, int32).reshape(ny,nx)
 
-      a1dura2   = np.load(duraname2)
-      a1epos2   = np.load(eposname2)
-      a1y2      = np.load(yname2)
-      a1x2      = np.load(xname2)
-
-      #duraname2 = cy.path_a2dat("dura",DTime1+dDTime).srcPath
-      #a2dura2   = fromfile(duraname2, int32).reshape(ny,nx)
-
-      #eposname2 = cy.path_a2dat("epos",DTime1+dDTime).srcPath
-      #a2epos2   = fromfile(eposname2, int32).reshape(ny,nx)
+      eposname2 = cy.path_a2dat("epos",DTime1+dDTime).srcPath
+      a2epos2   = fromfile(eposname2, int32).reshape(ny,nx)
 
 
-      a2duranext= np.full([ny,nx],miss_int, int32)
-      a2eposnext= np.full([ny,nx],miss_int, int32)
+      a2duranext= ones([ny,nx],int32)*miss_int
+      a2eposnext= ones([ny,nx],int32)*miss_int
       for iy1 in range(ny):
         for ix1 in range(nx):
           if (a2nextpos1[iy1,ix1] !=miss_int): 
@@ -301,18 +245,17 @@ for idt, DTime1 in enumerate(lDTimeRev):
             a2duranext[iy1,ix1] = a2dura2[iy2,ix2]
             a2eposnext[iy1,ix1] = a2epos2[iy2,ix2]
     else:  
-      a2duranext   = np.full([ny,nx] ,miss_int, int32)
-      a2eposnext   = np.full([ny,nx] ,miss_int, int32)
-
+      a2duranext   = array(ones(ny*nx).reshape(ny,nx) * miss_int, int32)
+      a2eposnext   = array(ones(ny*nx).reshape(ny,nx) * miss_int, int32)
   #--------------------------
   # initialize a2dura1 and a2dura2_new
   #*****************
-  a2dura1        = np.full([ny,nx], miss_int, int32) 
-  a2duranext_new = np.full([ny,nx], miss_int, int32) 
-  a2epos1        = np.full([ny,nx], miss_int, int32) 
-  a2eposnext_new = np.full([ny,nx], miss_int, int32) 
+  a2dura1        = ones([ny,nx],int32)* miss_int
+  a2duranext_new = ones([ny,nx],int32)* miss_int
+  a2epos1        = ones([ny,nx],int32)* miss_int
+  a2eposnext_new = ones([ny,nx],int32)* miss_int
 
-  a2nextpos0     = np.full([ny,nx], miss_int, int32) 
+  a2nextpos0     = ones([ny,nx],int32)* miss_int
   #*****************
   ax1 = ma.masked_where(a2age1 ==miss_int, X).compressed()
   ay1 = ma.masked_where(a2age1 ==miss_int, Y).compressed()
@@ -354,39 +297,26 @@ for idt, DTime1 in enumerate(lDTimeRev):
   #--------------------------------------
   # out dir
   #**********
-  duradir1     = cy.path_clist_org("dura"   ,DTime1)[0]
-  eposdir1     = cy.path_clist_org("epos"   ,DTime1)[0]
-
-  nextposdir0  = cy.path_clist_org("nextpos",DTime0)[0]
+  duradir1     = cy.path_a2dat("dura"   ,DTime1).srcDir
+  eposdir1     = cy.path_a2dat("epos"   ,DTime1).srcDir
+  nextposdir0  = cy.path_a2dat("nextpos",DTime0).srcDir
 
   mk_dir(duradir1)
   mk_dir(eposdir1)
-
   mk_dir(nextposdir0)
   #----------
   # out name
   #**********
-  duraname1    = cy.path_clist_org("dura"   ,DTime1)[1]
-  eposname1    = cy.path_clist_org("epos"   ,DTime1)[1]
-
-  nextposname0 = cy.path_clist_org("nextpos",DTime0)[1]
+  duraname1    = cy.path_a2dat("dura"   ,DTime1).srcPath
+  eposname1    = cy.path_a2dat("epos"   ,DTime1).srcPath
+  nextposname0 = cy.path_a2dat("nextpos",DTime0).srcPath
+  
   #----------
   # write to file
   #**********
-  a1dura1 = a2dura1[a1y1, a1x1]
-  a1epos1 = a2epos1[a1y1, a1x1]
-  np.save(duraname1, a1dura1)
-  np.save(eposname1, a1epos1)
-
-  if idt != nlDTime-1:
-    a1y0    = np.load(cy.path_clist_org("y" ,DTime0)[1])
-    a1x0    = np.load(cy.path_clist_org("x" ,DTime0)[1])
-    a1nextpos0 = a2nextpos0[a1y0, a1x0]
-    np.save(nextposname0, a1nextpos0)
-
-  #a2dura1.tofile(duraname1)
-  #a2epos1.tofile(eposname1)
-  #a2nextpos0.tofile(nextposname0) 
+  a2dura1.tofile(duraname1)
+  a2epos1.tofile(eposname1)
+  a2nextpos0.tofile(nextposname0) 
 
   print duraname1
 
